@@ -5,40 +5,43 @@ from bs4 import BeautifulSoup
 
 def scrape(url):
     # set up headers
-    headers = {"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:66.0) Gecko/20100101 Firefox/66.0", "Accept-Encoding":"gzip, deflate", "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "DNT":"1","Connection":"close", "Upgrade-Insecure-Requests":"1"}
-
-    # set up proxies
-    http_proxy = "http://10.10.1.10:3128"
-    https_proxy = "https://10.10.1.11:1080"
-    ftp_proxy = "ftp://10.10.1.10:3128"
-
-    proxies = {
-        "http" : http_proxy,
-        "https" : https_proxy,
-        "ftp" : ftp_proxy
+    header = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.125 Safari/537.36",
+        "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8"
     }
 
-    # get the page of the product
-    response = requests.get(url=url, headers=headers)
-    contents = response.text
-    print(contents)
+    response = requests.get(
+        url,
+        headers=header)
 
-    # Make soup
-    soup = BeautifulSoup(contents, "html.parser")
+    data = response.text
+    soup = BeautifulSoup(data, "html.parser")
+
     return soup
 
+def get_links(soup):
+    all_link_elements = soup.select("a.property-card-link[tabindex='0']")
+    # print(all_link_elements)
+    all_links = []
 
-def selenium_scrape(html):
-    # print(html)
-    try:
-        soup = BeautifulSoup(html, 'html.parser')
-        print("try soup")
-    except:
-        soup = BeautifulSoup(html, 'lxml')
-        print("execpt soup")
-    print(soup)
-    for item in soup.findAll(name="li"):
-        for script in item.findAllNext(name="script"):
-            if "url" in script.text:
-                print("Url: " + script)
+    for link in all_link_elements:
+        href = link["href"]
+        if "http" not in href:
+            all_links.append(f"https://www.zillow.com{href}")
+        else:
+            all_links.append(href)
 
+    return all_links
+
+def get_addresses(soup):
+    all_address_elements = soup.select("address")
+    all_addresses = [address.get_text().split(" | ")[-1] for address in all_address_elements]
+
+    return all_addresses
+
+def get_prices(soup):
+    all_price_elements = soup.select("span[data-test='property-card-price']")
+    # print(all_price_elements)
+    all_prices = [price_el.text.split("+")[0] if "+" in price_el.text else price_el.text.split("/")[0] for price_el in all_price_elements]
+
+    return all_prices
